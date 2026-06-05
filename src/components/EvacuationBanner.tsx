@@ -1,9 +1,24 @@
 import { useCampStore } from '../store/campStore';
 import { AlertTriangle, Siren } from 'lucide-react';
+import { useMemo } from 'react';
 
 export function EvacuationBanner() {
-  const hasHighRisk = useCampStore((s) => s.hasHighRisk());
-  const hasCriticalRisk = useCampStore((s) => s.hasCriticalRisk());
+  const sites = useCampStore((s) => s.sites);
+  const weatherTags = useCampStore((s) => s.weatherTags);
+
+  const hasHighRisk = useMemo(() => {
+    return sites.some((s) => {
+      const tag = weatherTags.find((t) => t.id === s.weatherTagId);
+      return tag && tag.riskLevel >= 2;
+    });
+  }, [sites, weatherTags]);
+
+  const hasCriticalRisk = useMemo(() => {
+    return sites.some((s) => {
+      const tag = weatherTags.find((t) => t.id === s.weatherTagId);
+      return tag && tag.riskLevel >= 3;
+    });
+  }, [sites, weatherTags]);
 
   if (!hasHighRisk) return null;
 

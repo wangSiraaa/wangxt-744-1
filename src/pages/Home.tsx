@@ -7,15 +7,25 @@ import { ReservationPanel } from '../components/ReservationPanel';
 import { useOfflineDetection } from '../hooks/useOfflineDetection';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Settings, MapPin } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function HomePage() {
-  const filteredSites = useCampStore((s) => s.filteredSites());
+  const sites = useCampStore((s) => s.sites);
+  const selectedWeatherFilters = useCampStore((s) => s.selectedWeatherFilters);
+  const weatherTags = useCampStore((s) => s.weatherTags);
   const selectedSiteId = useCampStore((s) => s.selectedSiteId);
   const navigate = useNavigate();
 
   useOfflineDetection();
 
-  const rows = [...new Set(filteredSites.map((s) => s.row))].sort((a, b) => a - b);
+  const filteredSites = useMemo(() => {
+    if (selectedWeatherFilters.length === 0) return sites;
+    return sites.filter((s) => selectedWeatherFilters.includes(s.weatherTagId));
+  }, [sites, selectedWeatherFilters]);
+
+  const rows = useMemo(() => {
+    return [...new Set(filteredSites.map((s) => s.row))].sort((a, b) => a - b);
+  }, [filteredSites]);
 
   return (
     <div className="min-h-screen bg-[#f5f0e8] flex flex-col">

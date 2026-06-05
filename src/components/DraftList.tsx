@@ -1,14 +1,23 @@
 import { useCampStore } from '../store/campStore';
 import { Trash2, RotateCcw, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 
 export function DraftList() {
   const drafts = useCampStore((s) => s.drafts);
   const removeDraft = useCampStore((s) => s.removeDraft);
   const selectSite = useCampStore((s) => s.selectSite);
-  const getSite = useCampStore((s) => s.getSiteById);
-  const getTag = useCampStore((s) => s.getWeatherTagById);
+  const sites = useCampStore((s) => s.sites);
+  const weatherTags = useCampStore((s) => s.weatherTags);
   const navigate = useNavigate();
+
+  const draftsWithInfo = useMemo(() => {
+    return drafts.map((draft) => {
+      const site = sites.find((s) => s.id === draft.siteId) ?? null;
+      const tag = site ? weatherTags.find((t) => t.id === site.weatherTagId) ?? null : null;
+      return { draft, site, tag, isStrongWind: tag?.isStrongWind ?? false };
+    });
+  }, [drafts, sites, weatherTags]);
 
   if (drafts.length === 0) {
     return (
@@ -22,11 +31,7 @@ export function DraftList() {
 
   return (
     <div className="space-y-3">
-      {drafts.map((draft) => {
-        const site = getSite(draft.siteId);
-        const tag = site ? getTag(site.weatherTagId) : null;
-        const isStrongWind = tag?.isStrongWind ?? false;
-
+      {draftsWithInfo.map(({ draft, site, tag, isStrongWind }) => {
         return (
           <div
             key={draft.id}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCampStore } from '../store/campStore';
 import { WeatherIcon } from './WeatherIcon';
 import { RISK_LABELS } from '../types';
@@ -10,8 +10,8 @@ const typeIcons = { tent: Tent, rv: Truck, cabin: Home };
 export function ReservationPanel() {
   const selectedSiteId = useCampStore((s) => s.selectedSiteId);
   const selectSite = useCampStore((s) => s.selectSite);
-  const getSite = useCampStore((s) => s.getSiteById);
-  const getTag = useCampStore((s) => s.getWeatherTagById);
+  const sites = useCampStore((s) => s.sites);
+  const weatherTags = useCampStore((s) => s.weatherTags);
   const saveDraft = useCampStore((s) => s.saveDraft);
   const drafts = useCampStore((s) => s.drafts);
 
@@ -20,8 +20,17 @@ export function ReservationPanel() {
   const [guests, setGuests] = useState(1);
   const [saved, setSaved] = useState(false);
 
-  const site = selectedSiteId ? getSite(selectedSiteId) : null;
-  const tag = site ? getTag(site.weatherTagId) : null;
+  const site = useMemo(() => {
+    return selectedSiteId ? sites.find((s) => s.id === selectedSiteId) ?? null : null;
+  }, [selectedSiteId, sites]);
+
+  const tag = useMemo(() => {
+    return site ? weatherTags.find((t) => t.id === site.weatherTagId) ?? null : null;
+  }, [site, weatherTags]);
+
+  const existingDrafts = useMemo(() => {
+    return site ? drafts.filter((d) => d.siteId === site.id) : [];
+  }, [site, drafts]);
 
   useEffect(() => {
     setGuestName('');
@@ -34,7 +43,6 @@ export function ReservationPanel() {
 
   const isStrongWind = tag.isStrongWind;
   const TypeIcon = typeIcons[site.type];
-  const existingDrafts = drafts.filter((d) => d.siteId === site.id);
 
   const handleSave = () => {
     if (isStrongWind) return;

@@ -2,14 +2,18 @@ import { useCampStore } from '../store/campStore';
 import { WeatherIcon } from './WeatherIcon';
 import { RISK_LABELS } from '../types';
 import { Tent, Truck, Home, AlertTriangle } from 'lucide-react';
+import { useMemo } from 'react';
 
 const typeIcons = { tent: Tent, rv: Truck, cabin: Home };
 
 export function SiteCard({ siteId }: { siteId: string }) {
-  const site = useCampStore((s) => s.getSiteById(siteId))!;
-  const weatherTag = useCampStore((s) => s.getWeatherTagById(site.weatherTagId))!;
+  const sites = useCampStore((s) => s.sites);
+  const weatherTags = useCampStore((s) => s.weatherTags);
   const selectSite = useCampStore((s) => s.selectSite);
   const selectedSiteId = useCampStore((s) => s.selectedSiteId);
+
+  const site = useMemo(() => sites.find((s) => s.id === siteId)!, [sites, siteId]);
+  const weatherTag = useMemo(() => weatherTags.find((t) => t.id === site.weatherTagId)!, [weatherTags, site.weatherTagId]);
 
   const isSelected = selectedSiteId === site.id;
   const isStrongWind = weatherTag.isStrongWind;
