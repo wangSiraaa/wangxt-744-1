@@ -4,9 +4,11 @@ import { WeatherFilterBar } from '../components/WeatherFilterBar';
 import { EvacuationBanner } from '../components/EvacuationBanner';
 import { OfflineIndicator } from '../components/OfflineIndicator';
 import { ReservationPanel } from '../components/ReservationPanel';
+import { CandidateCompare } from '../components/CandidateCompare';
+import { OperationToast } from '../components/OperationToast';
 import { useOfflineDetection } from '../hooks/useOfflineDetection';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Settings, MapPin } from 'lucide-react';
+import { FileText, Settings, MapPin, GitCompare } from 'lucide-react';
 import { useMemo } from 'react';
 
 export default function HomePage() {
@@ -14,6 +16,7 @@ export default function HomePage() {
   const selectedWeatherFilters = useCampStore((s) => s.selectedWeatherFilters);
   const weatherTags = useCampStore((s) => s.weatherTags);
   const selectedSiteId = useCampStore((s) => s.selectedSiteId);
+  const compareCandidates = useCampStore((s) => s.compareCandidates);
   const navigate = useNavigate();
 
   useOfflineDetection();
@@ -30,6 +33,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f5f0e8] flex flex-col">
       <EvacuationBanner />
+      <OperationToast />
 
       <header className="bg-[#2D5016] text-white px-6 py-4 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -44,6 +48,12 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-3">
             <OfflineIndicator />
+            {compareCandidates.length > 0 && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-lg text-xs font-medium">
+                <GitCompare size={12} />
+                对比 {compareCandidates.length}
+              </span>
+            )}
             <button
               onClick={() => navigate('/drafts')}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors cursor-pointer"
@@ -62,7 +72,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-6 pb-32">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm">
           <WeatherFilterBar />
         </div>
@@ -92,6 +102,7 @@ export default function HomePage() {
         </div>
       </main>
 
+      <CandidateCompare />
       {selectedSiteId && <ReservationPanel />}
     </div>
   );

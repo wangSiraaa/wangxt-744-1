@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useCampStore } from '../store/campStore';
 import { WeatherIcon } from './WeatherIcon';
 import { RISK_LABELS } from '../types';
@@ -32,24 +32,20 @@ export function ReservationPanel() {
     return site ? drafts.filter((d) => d.siteId === site.id) : [];
   }, [site, drafts]);
 
-  useEffect(() => {
-    setGuestName('');
-    setDate('');
-    setGuests(1);
-    setSaved(false);
-  }, [selectedSiteId]);
-
   if (!site || !tag) return null;
 
   const isStrongWind = tag.isStrongWind;
   const TypeIcon = typeIcons[site.type];
 
   const handleSave = () => {
-    if (isStrongWind) return;
-    if (!guestName.trim() || !date) return;
-    saveDraft({ siteId: site.id, guestName: guestName.trim(), date, guests });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const success = saveDraft({ siteId: site.id, guestName: guestName.trim(), date, guests });
+    if (success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      setGuestName('');
+      setDate('');
+      setGuests(1);
+    }
   };
 
   return (

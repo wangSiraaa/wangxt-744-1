@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CampSite, WeatherTag, ReservationDraft, WeatherSnapshot } from '../types';
+import type { CampSite, WeatherTag, ReservationDraft, WeatherSnapshot, OperationError, CompareCandidate } from '../types';
 import { DEFAULT_WEATHER_TAGS, DEFAULT_CAMPSITES } from '../data/mockData';
 
 interface CampStore {
@@ -12,6 +12,8 @@ interface CampStore {
   selectedWeatherFilters: string[];
   isOffline: boolean;
   snapshotTimestamp: number | null;
+  compareCandidates: CompareCandidate[];
+  operationErrors: OperationError[];
 
   setSites: (sites: CampSite[]) => void;
   addSite: (site: CampSite) => void;
@@ -25,7 +27,7 @@ interface CampStore {
   selectSite: (id: string | null) => void;
   toggleWeatherFilter: (tagId: string) => void;
   clearWeatherFilters: () => void;
-  saveDraft: (draft: Omit<ReservationDraft, 'id' | 'createdAt'>) => void;
+  saveDraft: (draft: Omit<ReservationDraft, 'id' | 'createdAt'>) => boolean;
   removeDraft: (id: string) => void;
   setOffline: (offline: boolean) => void;
   saveSnapshot: () => void;
@@ -34,6 +36,13 @@ interface CampStore {
   filteredSites: () => CampSite[];
   hasHighRisk: () => boolean;
   hasCriticalRisk: () => boolean;
+  addCompareCandidate: (siteId: string) => boolean;
+  removeCompareCandidate: (siteId: string) => void;
+  clearCompareCandidates: () => void;
+  isCompareCandidate: (siteId: string) => boolean;
+  addOperationError: (message: string, type?: 'warning' | 'error' | 'info') => void;
+  removeOperationError: (id: string) => void;
+  clearOperationErrors: () => void;
 }
 
 export const useCampStore = create<CampStore>()(
@@ -47,6 +56,8 @@ export const useCampStore = create<CampStore>()(
       selectedWeatherFilters: [],
       isOffline: false,
       snapshotTimestamp: null,
+      compareCandidates: [],
+      operationErrors: [],
 
       setSites: (sites) => set({ sites }),
       addSite: (site) => set((s) => ({ sites: [...s.sites, site] })),
@@ -79,13 +90,35 @@ export const useCampStore = create<CampStore>()(
         }),
       clearWeatherFilters: () => set({ selectedWeatherFilters: [] }),
 
-      saveDraft: (draft) =>
+      saveDraft: (draft) => {
+        const state = get();
+        const site = state.getSiteById(draft.siteId);
+        if (!site) {
+          state.addOperationError('营位不存在，无法保存草稿', 'error');
+          return false;
+        }
+        const tag = state.getWeatherTagById(site.weatherTagId);
+        if (tag?.isStrongWind) {
+          state.addOperationError('该营位当前处于强风状态，不可预约', 'error');
+          return false;
+        }
+        if (!draft.guestName.trim()) {
+          state.addOperationError('请输入姓名', 'warning');
+          return false;
+        }
+        if (!draft.date) {
+          state.addOperationError('请选择预约日期', 'warning');
+          return false;
+        }
         set((s) => ({
           drafts: [
             ...s.drafts,
             { ...draft, id: `draft-${Date.now()}`, createdAt: Date.now() },
           ],
-        })),
+          operationErrors: [],
+        }));
+        return true;
+      },
       removeDraft: (id) => set((s) => ({ drafts: s.drafts.filter((d) => d.id !== id) })),
 
       setOffline: (offline) => set({ isOffline: offline }),
@@ -130,6 +163,42 @@ export const useCampStore = create<CampStore>()(
           return tag && tag.riskLevel >= 3;
         });
       },
+
+      addCompareCandidate: (siteId) => {
+        const state = get();
+        if (state.compareCandidates.length >= 4) {
+          state.addOperationError('最多只能对比 4 个营位', 'warning');
+          return false;
+        }
+        if (state.isCompareCandidate(siteId)) {
+          state.addOperationError('该营位已在对比列表中', 'info');
+          return false;
+        }
+        set((s) => ({
+          compareCandidates: [...s.compareCandidates, { siteId, addedAt: Date.now() }],
+        }));
+        return true;
+      },
+      removeCompareCandidate: (siteId) =>
+        set((s) => ({
+          compareCandidates: s.compareCandidates.filter((c) => c.siteId !== siteId),
+        })),
+      clearCompareCandidates: () => set({ compareCandidates: [] }),
+      isCompareCandidate: (siteId) =>
+        get().compareCandidates.some((c) => c.siteId === siteId),
+
+      addOperationError: (message, type = 'error') =>
+        set((s) => ({
+          operationErrors: [
+            ...s.operationErrors,
+            { id: `err-${Date.now()}`, message, type, timestamp: Date.now() },
+          ],
+        })),
+      removeOperationError: (id) =>
+        set((s) => ({
+          operationErrors: s.operationErrors.filter((e) => e.id !== id),
+        })),
+      clearOperationErrors: () => set({ operationErrors: [] }),
     }),
     {
       name: 'camp-weather-storage',

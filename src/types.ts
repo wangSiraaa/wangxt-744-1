@@ -47,3 +47,15 @@ export const RISK_COLORS: Record<number, string> = {
   2: '#E67E22',
   3: '#C0392B',
 };
+
+export interface OperationError {
+  id: string;
+  message: string;
+  type: 'warning' | 'error' | 'info';
+  timestamp: number;
+}
+
+export interface CompareCandidate {
+  siteId: string;
+  addedAt: number;
+}
